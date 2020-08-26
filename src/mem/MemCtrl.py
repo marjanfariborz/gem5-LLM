@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020 ARM Limited
+# Copyright (c) 2012-2020 ARM Limited
 # All rights reserved.
 #
 # The license below extends only to copyright in the software and shall
@@ -9,6 +9,11 @@
 # terms below provided that you ensure that this notice is replicated
 # unmodified and in its entirety in all distributions of the software,
 # modified or unmodified, in source code or in binary form.
+#
+# Copyright (c) 2013 Amin Farmahini-Farahani
+# Copyright (c) 2015 University of Kaiserslautern
+# Copyright (c) 2015 The University of Bologna
+# All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -32,35 +37,60 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-# Author: Matteo Andreozzi
 
 from m5.params import *
+from m5.proxy import *
 from m5.objects.QoSMemCtrl import *
-from QoSMemSinkInterface import *
 
-class QoSMemSinkCtrl(QoSMemCtrl):
-    type = 'QoSMemSinkCtrl'
-    cxx_header = "mem/qos/mem_sink.hh"
-    cxx_class = "QoS::MemSinkCtrl"
-    port = SlavePort("Slave ports")
+# Enum for memory scheduling algorithms, currently First-Come
+# First-Served and a First-Row Hit then First-Come First-Served
+class MemSched(Enum): vals = ['fcfs', 'frfcfs']
 
+# MemCtrl is a single-channel single-ported Memory controller model
+# that aims to model the most important system-level performance
+# effects of a memory controller, interfacing with media specific
+# interfaces
+class MemCtrl(QoSMemCtrl):
+    type = 'MemCtrl'
+    cxx_header = "mem/mem_ctrl.hh"
 
-    interface = Param.QoSMemSinkInterface(QoSMemSinkInterface(),
-                "Interface to  memory")
+    # single-ported on the system interface side, instantiate with a
+    # bus in front of the controller for multiple ports
+    port = SlavePort("Slave port")
 
-    # the basic configuration of the controller architecture, note
-    # that each entry corresponds to a burst for the specific DRAM
+    # Interface to volatile, DRAM media
+    dram = Param.DRAMInterface(NULL, "DRAM interface")
+
+    # Interface to non-volatile media
+    nvm = Param.NVMInterface(NULL, "NVM interface")
+
+    # Set default buffer sizes
+    # each entry corresponds to a burst for the specific memory
     # configuration (e.g. x32 with burst length 8 is 32 bytes) and not
     # the cacheline size or request/packet size
     write_buffer_size = Param.Unsigned(64, "Number of write queue entries")
     read_buffer_size = Param.Unsigned(32, "Number of read queue entries")
 
-    # memory packet size
-    memory_packet_size = Param.MemorySize("32B", "Memory packet size")
+    # threshold in percent for when to forcefully trigger writes and
+    # start emptying the write buffer
+    write_high_thresh_perc = Param.Percent(85, "Threshold to force writes")
 
-    # request latency - minimum timing between requests
-    request_latency = Param.Latency("20ns", "Memory latency between requests")
+    # threshold in percentage for when to start writes if the read
+    # queue is empty
+    write_low_thresh_perc = Param.Percent(50, "Threshold to start writes")
 
-    # response latency - time to issue a response once a request is serviced
-    response_latency = Param.Latency("20ns", "Memory response latency")
+    # minimum write bursts to schedule before switching back to reads
+    min_writes_per_switch = Param.Unsigned(16, "Minimum write bursts before "
+                                           "switching to reads")
+
+    # scheduler, address map and page policy
+    mem_sched_policy = Param.MemSched('frfcfs', "Memory scheduling policy")
+
+    # pipeline latency of the controller and PHY, split into a
+    # frontend part and a backend part, with reads and writes serviced
+    # by the queues only seeing the frontend contribution, and reads
+    # serviced by the memory seeing the sum of the two
+    static_frontend_latency = Param.Latency("10ns", "Static frontend latency")
+    static_backend_latency = Param.Latency("10ns", "Static backend latency")
+
+    command_window = Param.Latency("10ns", "Static backend latency")

@@ -94,7 +94,7 @@ class TokenSlavePort : public SlavePort
 
     std::deque<PacketPtr> respQueue;
 
-    void recvRespRetry() override;
+    void recvRespRetry();
 
   public:
     TokenSlavePort(const std::string& name, ClockedObject *owner,

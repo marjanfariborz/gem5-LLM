@@ -401,7 +401,7 @@ PhysicalMemory::unserializeStore(CheckpointIn &cp)
 
     string filename;
     UNSERIALIZE_SCALAR(filename);
-    string filepath = cp.getCptDir() + "/" + filename;
+    string filepath = cp.cptDir + "/" + filename;
 
     // mmap memoryfile
     gzFile compressed_mem = gzopen(filepath.c_str(), "rb");

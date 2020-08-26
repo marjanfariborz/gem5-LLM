@@ -35,7 +35,6 @@
 #include <iostream>
 #include <vector>
 
-#include "base/compiler.hh"
 #include "mem/ruby/common/Consumer.hh"
 #include "mem/ruby/network/garnet2.0/CommonTypes.hh"
 #include "mem/ruby/network/garnet2.0/NetworkLink.hh"
@@ -92,7 +91,7 @@ class OutputUnit : public Consumer
 
   private:
     Router *m_router;
-    int M5_CLASS_VAR_USED m_id;
+    int m_id;
     PortDirection m_direction;
     int m_vc_per_vnet;
     NetworkLink *m_out_link;
